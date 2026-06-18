@@ -119,12 +119,10 @@ impl LanguageServer for RegexLinterServer {
 
 	async fn did_change(&self, params: DidChangeTextDocumentParams) -> () {
 		let uri = params.text_document.uri;
-		if let Some(change) = params.content_changes.into_iter().next() {
-			if let Ok(mut docs) = self.documents.write() && let Some(doc) = docs.get_mut(&uri) {
-				// The change contains the **full** text
-				doc.text = change.text;
-				doc.has_unsaved_changes = true;
-			}
+		if let Some(change) = params.content_changes.into_iter().next() && let Ok(mut docs) = self.documents.write() && let Some(doc) = docs.get_mut(&uri) {
+			// The change contains the **full** text
+			doc.text = change.text;
+			doc.has_unsaved_changes = true;
 		}
 	}
 
