@@ -1,0 +1,12 @@
+[package]
+name = "regex-linter-lsp"
+version = "1.0.0"
+edition = "2024"
+
+[lib]
+path = "src/extension.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+zed_extension_api = "0.7.0"
+serde_json = "1.0"

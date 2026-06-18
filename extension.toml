@@ -1,0 +1,14 @@
+id = "regex-linter-lsp"
+name = "Regex Linter LSP"
+version = "1.0.0"
+schema_version = 1
+authors = ["Wazakindjes"]
+description = "Configurable regex-based linter that surfaces matches as LSP diagnostics"
+repository = "https://gitgud.malvager.net/Wazakindjes/zed-regex-linter-lsp"
+
+[language_servers.regex-linter]
+name = "Regex Linter"
+
+# Unfortunately we need to hardcode all languages we wanna support as there's no wildcard option ;_;
+# A minor benefit is that we now have a clear list of languages we need to map for `LANGUAGE_ID_MAP` and `COMMENT_MARKER_MAP` in `lsp-server/src/mod.rs`
+languages = ["C", "C++", "C#", "CSS", "Go", "HTML", "Java", "JavaScript", "Kotlin", "Less", "Lua", "Perl", "PHP", "PowerShell", "Python", "Ruby", "Rust", "SASS", "SCSS", "Shell Script", "Swift", "TSX", "TypeScript", "YAML"]

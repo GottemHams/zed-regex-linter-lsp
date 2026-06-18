@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  lsp-server:
+    name: LSP Server
+    runs-on: docker
+    defaults:
+      run:
+        working-directory: lsp-server
+    steps:
+      - id: checkout
+        name: Checkout rep0
+        uses: https://github.com/actions/checkout@v7
+
+      - id: setup-rust
+        name: Setup Rust
+        uses: https://github.com/dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - id: clippy
+        name: Run clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - id: buildem
+        name: Build that shit
+        run: cargo build --all-targets
+
+  extension:
+    name: Extension
+    runs-on: docker
+    steps:
+      - id: checkout
+        name: Checkout rep0
+        uses: https://github.com/actions/checkout@v7
+
+      - id: setup-rust
+        name: Setup Rust
+        uses: https://github.com/dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip2
+          components: clippy
+
+      - id: clippy
+        name: Run clippy
+        run: cargo clippy --target wasm32-wasip2 -- -D warnings
+
+      - id: buildem
+        name: Build that shit
+        run: cargo build --target=wasm32-wasip2
