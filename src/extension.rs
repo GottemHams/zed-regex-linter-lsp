@@ -1,5 +1,5 @@
-#![deny(clippy::implicit_return)]
-#![allow(clippy::needless_return)]
+#[allow(clippy::needless_return)]
+#[allow(clippy::unused_unit)]
 
 use std::fs;
 use zed_extension_api::{self as zed, Result, settings::LspSettings};
@@ -53,10 +53,8 @@ impl RegexLinterLspExtension {
 	const LANGUAGE_SERVER_ID: &str = "regex-linter";
 
 	fn lsp_server_path(&mut self) -> Result<String> {
-		if let Some(cached_path) = &self.cached_lsp_server_path {
-			if fs::metadata(cached_path).is_ok() {
-				return Ok(cached_path.clone());
-			}
+		if let Some(cached_path) = &self.cached_lsp_server_path && fs::metadata(cached_path).is_ok() {
+			return Ok(cached_path.clone());
 		}
 
 		let path = self.find_or_download_binary()?;

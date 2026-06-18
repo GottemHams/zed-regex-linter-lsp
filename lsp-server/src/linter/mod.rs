@@ -132,7 +132,7 @@ pub fn parse_config(settings: &serde_json::Value) -> HashMap<String, Linter> {
 			comments_only: config.comments_only.unwrap_or(true),
 			on_save: config.on_save.unwrap_or(false),
 			languages: config.languages.map(|langs| {
-				// Languages found in `LANGUAGE_ID_MAP` will be mapped to their LSP language ID, otherwise the original value is used (so you could also specify the ID directly)
+				// Languages found in `LANGUAGE_ID_MAP` will be mapped to their LSP language ID counterparts, otherwise we'll retain the original values (so you could also specify IDs directly)
 				langs.into_iter().map(|lang| {
 					LANGUAGE_ID_MAP.iter()
 						.find(|(zed_lang, _)| *zed_lang == lang)
@@ -148,14 +148,14 @@ pub fn parse_config(settings: &serde_json::Value) -> HashMap<String, Linter> {
 		.collect();
 }
 
-fn compilem_regexes(patterns: &Vec<String>) -> Option<Regex> {
+fn compilem_regexes(patterns: &[String]) -> Option<Regex> {
 	if patterns.is_empty() {
 		return None;
 	}
 
 	// Sort by longest patterns first so more specific matches take precedence
 	let mut sorted: Vec<&str> = patterns.iter().map(|s| s.as_ref()).collect();
-	sorted.sort_unstable_by(|a, b| b.len().cmp(&a.len()));
+	sorted.sort_unstable_by_key(|b| std::cmp::Reverse(b.len()));
 
 	let full_pattern = format!(r"(?P<word>{})(?::|\s+-+)?\s*(?P<message>.*)", sorted.join("|"));
 	return Regex::new(&full_pattern)

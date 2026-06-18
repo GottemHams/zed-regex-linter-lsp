@@ -1,5 +1,5 @@
-#![deny(clippy::implicit_return)]
-#![allow(clippy::needless_return)]
+#[allow(clippy::needless_return)]
+#[allow(clippy::unused_unit)]
 
 mod linter;
 
@@ -101,11 +101,9 @@ impl LanguageServer for RegexLinterServer {
 	async fn did_change_configuration(&self, params: DidChangeConfigurationParams) -> () {
 		eprintln!("Configuration changed, reloading linters...");
 		let parsed_settings = params.settings.as_object().and_then(|s| s.get("regex-linter"));
-		if let Some(parsed_settings) = parsed_settings {
-			if let Ok(mut linters) = self.linters.write() {
-				*linters = linter::parse_config(parsed_settings);
-				print_linter_info(&linters);
-			}
+		if let Some(parsed_settings) = parsed_settings && let Ok(mut linters) = self.linters.write() {
+			*linters = linter::parse_config(parsed_settings);
+			print_linter_info(&linters);
 		}
 	}
 
@@ -122,22 +120,18 @@ impl LanguageServer for RegexLinterServer {
 	async fn did_change(&self, params: DidChangeTextDocumentParams) -> () {
 		let uri = params.text_document.uri;
 		if let Some(change) = params.content_changes.into_iter().next() {
-			if let Ok(mut docs) = self.documents.write() {
-				if let Some(doc) = docs.get_mut(&uri) {
-					// The change contains the **full** text
-					doc.text = change.text;
-					doc.has_unsaved_changes = true;
-				}
+			if let Ok(mut docs) = self.documents.write() && let Some(doc) = docs.get_mut(&uri) {
+				// The change contains the **full** text
+				doc.text = change.text;
+				doc.has_unsaved_changes = true;
 			}
 		}
 	}
 
 	async fn did_save(&self, params: DidSaveTextDocumentParams) -> () {
 		let uri = params.text_document.uri;
-		if let Ok(mut docs) = self.documents.write() {
-			if let Some(doc) = docs.get_mut(&uri) {
-				doc.has_unsaved_changes = false;
-			}
+		if let Ok(mut docs) = self.documents.write() && let Some(doc) = docs.get_mut(&uri) {
+			doc.has_unsaved_changes = false;
 		}
 	}
 
