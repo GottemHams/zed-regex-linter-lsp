@@ -1,5 +1,5 @@
-#[allow(clippy::needless_return)]
-#[allow(clippy::unused_unit)]
+#![allow(clippy::needless_return)]
+#![allow(clippy::unused_unit)]
 
 mod linter;
 

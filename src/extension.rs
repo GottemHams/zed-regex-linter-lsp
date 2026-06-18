@@ -1,5 +1,5 @@
-#[allow(clippy::needless_return)]
-#[allow(clippy::unused_unit)]
+#![allow(clippy::needless_return)]
+#![allow(clippy::unused_unit)]
 
 use std::fs;
 use zed_extension_api::{self as zed, Result, settings::LspSettings};
