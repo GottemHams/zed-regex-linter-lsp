@@ -9,6 +9,8 @@ jobs:
   build-lsp-server:
     name: Build LSP Server
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
     strategy:
       matrix:
         include:
