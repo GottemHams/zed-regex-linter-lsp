@@ -16,16 +16,16 @@ jobs:
     steps:
       - id: checkout
         name: Checkout rep0
-        uses: actions/checkout@v7
+        uses: https://github.com/actions/checkout/actions/checkout@v7
 
       - id: setup-rust
         name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: https://github.com/actions/checkout/dtolnay/rust-toolchain@stable
         with:
           components: clippy
 
       - name: Cache build
-        uses: Swatinem/rust-cache@v2
+        uses: https://github.com/actions/checkout/Swatinem/rust-cache@v2
         with:
           workspaces: lsp-server
 
@@ -44,11 +44,11 @@ jobs:
     steps:
       - id: checkout
         name: Checkout rep0
-        uses: actions/checkout@v7
+        uses: https://github.com/actions/checkout/actions/checkout@v7
 
       - id: setup-rust
         name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: https://github.com/actions/checkout/dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-wasip2
           components: clippy
