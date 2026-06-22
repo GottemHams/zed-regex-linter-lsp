@@ -38,7 +38,6 @@ jobs:
         run: cargo build --all-targets
 
   extension:
-    if: github.repository == 'GottemHams/zed-regex-linter-lsp'
     name: Extension
     runs-on: ubuntu-latest
     steps:
