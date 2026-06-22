@@ -93,7 +93,7 @@ impl RegexLinterLspExtension {
 		let archive_name = format!("{}.{}", binary_name, archive_ext);
 		let release_url = format!("{}/v{}/{}", RELEASE_BASE_URL, VERSION, archive_name);
 		zed::download_file(&release_url, &working_dir, archive_type)
-			.map_err(|e| format!("Failed to download binary from release: {}", e))?;
+			.map_err(|e| format!("Failed to download binary from {}: {}", release_url, e))?;
 
 		fs::metadata(&download_path)
 			.map_err(|_| format!("Binary not found after extraction, which was expected at: {}", download_path))?;

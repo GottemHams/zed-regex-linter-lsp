@@ -121,5 +121,7 @@ done
 echo ''
 echo 'Ayyy should be gucci mane'
 echo "Don't forget to run this after committing your other changes:"
-echo "git tag -a \"v$new_version\" -m \"Release v$new_version\""
+
+# shellcheck disable=SC2028
+echo "git tag -a \"v$new_version\" -m \"\$(printf \"Release v$new_version:\n\n* Foo\n* Bar\")\" -e"
 echo "git push && git push --tags"

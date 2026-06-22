@@ -28,7 +28,7 @@ const LANGUAGE_ID_MAP: &[(&str, &str)] = &[
 	("Rust", "rust"),
 	("SASS", "sass"),
 	("SCSS", "scss"),
-	("Shell Script", "shellscript"),
+	("Shell Script", "shell script"), // Apparently the ID contains a space too??¿¿¿÷¿??//
 	("Swift", "swift"),
 	("TSX", "tsx"),
 	("TypeScript", "typescript"),
@@ -56,7 +56,7 @@ const COMMENT_MARKER_MAP: &[(&str, &[&str])] = &[
 	("rust", &["//", "/*"]),
 	("sass", &["//", "/*"]),
 	("scss", &["//", "/*"]),
-	("shellscript", &["#"]),
+	("shell script", &["#"]),
 	("swift", &["//", "/*"]),
 	("tsx", &["//", "/*"]),
 	("typescript", &["//", "/*"]),
