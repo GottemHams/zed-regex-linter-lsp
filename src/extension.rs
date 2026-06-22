@@ -79,7 +79,7 @@ impl RegexLinterLspExtension {
 		};
 
 		let working_dir = format!("{}-{}", PACKAGE_NAME, VERSION);
-		let binary_name = format!("{}{}", PACKAGE_NAME, platform_suffix);
+		let binary_name = format!("regex-linter-lsp-server{}", platform_suffix);
 		let download_path = format!("{}/{}", working_dir, binary_name);
 		if fs::metadata(&download_path).is_ok() {
 			return Ok(download_path);
