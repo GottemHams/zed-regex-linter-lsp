@@ -6,7 +6,7 @@ on:
 
 jobs:
   stale:
-    runs-on: docker
+    runs-on: ubuntu-latest
     steps:
       - id: stale
         name: Checkem stale issues/PRs
