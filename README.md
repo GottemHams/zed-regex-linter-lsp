@@ -18,7 +18,8 @@ You can simply install it directly via Zed > `Extensions` > `Regex Linter LSP`.
 				// The key will be used as the LSP's "source", which is the name you see on diagnostics
 				"my-cool-linter": {
 					// **All** settings are technically optional, but it won't do much without any regex patterns
-					"enabled": false, // Default is `true` of course
+					// Default is `true` of course
+					"enabled": false,
 
 					// For only matching within comments, which is based off a hardcoded list of comment markers for every language we support
 					// Note that this is a pretty dumb match, it won't detect multiline comments if the first line has different syntax than the others (like `/*` and `*`)
@@ -26,8 +27,11 @@ You can simply install it directly via Zed > `Extensions` > `Regex Linter LSP`.
 					// The default is `true` regardless
 					"comments_only": false,
 					
-					"on_save": true, // Only lint when the file is saved instead of real-time (default is `false`)
-					"languages": ["Rust"], // Only apply to these languages, based on Zed's language names (default is all languages the extension knows about, i.e. what's in `extension.toml`)
+					// Only lint when the file is saved instead of real-time (default is `false`)
+					"on_save": true,
+
+					// Only apply to these languages, based on Zed's language names (default is all languages the extension knows about, i.e. what's in `extension.toml`)
+					"languages": ["Rust"],
 	
 					// The default for all of these is just an empty list (obviously)
 					// Note that the regexes are case-**sensitive**, but you can make something case-insensitive by using the `(?i)` flag in a separate group
