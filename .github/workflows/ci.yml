@@ -8,21 +8,27 @@ on:
 
 jobs:
   lsp-server:
+    if: github.repository == 'GottemHams/zed-regex-linter-lsp'
     name: LSP Server
-    runs-on: docker
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: lsp-server
     steps:
       - id: checkout
         name: Checkout rep0
-        uses: https://github.com/actions/checkout@v7
+        uses: actions/checkout@v7
 
       - id: setup-rust
         name: Setup Rust
-        uses: https://github.com/dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
+
+      - name: Cache build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: lsp-server
 
       - id: clippy
         name: Run clippy
@@ -33,16 +39,17 @@ jobs:
         run: cargo build --all-targets
 
   extension:
+    if: github.repository == 'GottemHams/zed-regex-linter-lsp'
     name: Extension
-    runs-on: docker
+    runs-on: ubuntu-latest
     steps:
       - id: checkout
         name: Checkout rep0
-        uses: https://github.com/actions/checkout@v7
+        uses: actions/checkout@v7
 
       - id: setup-rust
         name: Setup Rust
-        uses: https://github.com/dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-wasip2
           components: clippy

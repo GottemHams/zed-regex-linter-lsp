@@ -6,7 +6,7 @@ use zed_extension_api::{self as zed, Result, settings::LspSettings};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
-const RELEASE_BASE_URL: &str = concat!(env!("CARGO_PKG_REPOSITORY"), "/releases/download");
+const RELEASE_BASE_URL: &str = "https://github.com/GottemHams/zed-regex-linter-lsp/releases/download";
 
 struct RegexLinterLspExtension {
 	cached_lsp_server_path: Option<String>,
