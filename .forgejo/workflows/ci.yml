@@ -9,7 +9,7 @@ on:
 jobs:
   lsp-server:
     name: LSP Server
-    runs-on: ubuntu-latest
+    runs-on: docker
     defaults:
       run:
         working-directory: lsp-server
@@ -39,7 +39,7 @@ jobs:
 
   extension:
     name: Extension
-    runs-on: ubuntu-latest
+    runs-on: docker
     steps:
       - id: checkout
         name: Checkout rep0
