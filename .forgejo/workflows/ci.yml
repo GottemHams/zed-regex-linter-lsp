@@ -24,11 +24,6 @@ jobs:
         with:
           components: clippy
 
-      - name: Cache build
-        uses: https://github.com/Swatinem/rust-cache@v2
-        with:
-          workspaces: lsp-server
-
       - id: clippy
         name: Run clippy
         run: cargo clippy --all-targets -- -D warnings
