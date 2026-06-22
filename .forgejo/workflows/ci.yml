@@ -8,7 +8,6 @@ on:
 
 jobs:
   lsp-server:
-    if: github.repository == 'GottemHams/zed-regex-linter-lsp'
     name: LSP Server
     runs-on: ubuntu-latest
     defaults:

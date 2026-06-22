@@ -6,7 +6,6 @@ on:
 
 jobs:
   stale:
-    if: github.repository == 'Wazakindjes/zed-regex-linter-lsp'
     runs-on: ubuntu-latest
     steps:
       - id: stale
