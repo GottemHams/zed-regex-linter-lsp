@@ -102,4 +102,6 @@ jobs:
           # NOTE: this **must** match the `id` field in `extension.toml`
           extension-name: regex-linter-lsp
           create-pullrequest: false # TODO: for testing the update itself first
-          push-to: GottemHams/extensions
+          push-to: GottemHams/zed-extensions
+        env:
+          COMMITTER_TOKEN: ${{ secrets.COMMITTER_TOKEN }}
