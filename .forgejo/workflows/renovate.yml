@@ -22,6 +22,7 @@ jobs:
         name: Run Renovate
         run: renovate
         env:
+          LOG_LEVEL: debug
           RENOVATE_TOKEN: ${{ secrets.RENOVATEM_TOKEN }}
           RENOVATE_PLATFORM: 'forgejo'
           RENOVATE_BRANCH_PREFIX: 'ren0vatem-'
