@@ -48,7 +48,7 @@ impl RegexLinterServer {
 		}
 		else {
 			eprintln!("Loaded linters:");
-			for (source, linter) in linters {//.iter() {
+			for (source, linter) in linters {
 				eprintln!("- {}: {:?}", source, linter);
 			}
 		}
@@ -118,7 +118,11 @@ impl LanguageServer for RegexLinterServer {
 	async fn did_open(&self, params: DidOpenTextDocumentParams) -> () {
 		let text_document = params.text_document;
 		let uri = text_document.uri;
-		let doc = if let Ok(mut docs) = self.documents.write() {
+		let doc = {
+			let Ok(mut docs) = self.documents.write() else {
+				return;
+			};
+
 			let new_doc = Document {
 				language_id: text_document.language_id,
 				text: text_document.text,
@@ -127,49 +131,54 @@ impl LanguageServer for RegexLinterServer {
 			};
 
 			docs.insert(uri.clone(), new_doc.clone());
-			Some(&new_doc.clone())
-		}
-		else {
-			None
+			new_doc.clone()
 		};
 
-		if let Some(doc) = doc {
-			self.publish_diagnostics(&uri, doc).await;
-		}
+		self.publish_diagnostics(&uri, &doc).await;
 	}
 
 	async fn did_change(&self, params: DidChangeTextDocumentParams) -> () {
 		let text_document = params.text_document;
 		let uri = text_document.uri;
-		let doc = if let Some(change) = params.content_changes.into_iter().next() && let Ok(mut docs) = self.documents.write() && let Some(doc) = docs.get_mut(&uri) {
+		let doc = {
+			let Some(change) = params.content_changes.into_iter().next() else {
+				return;
+			};
+
+			let Ok(mut docs) = self.documents.write() else {
+				return;
+			};
+
+			let Some(doc) = docs.get_mut(&uri) else {
+				return;
+			};
+
 			// The change contains the **full** text
 			doc.text = change.text;
 			doc.version = text_document.version;
 			doc.has_unsaved_changes = true;
-			Some(&doc.clone())
-		}
-		else {
-			None
+			doc.clone()
 		};
 
-		if let Some(doc) = doc {
-			self.publish_diagnostics(&uri, doc).await;
-		}
+		self.publish_diagnostics(&uri, &doc).await;
 	}
 
 	async fn did_save(&self, params: DidSaveTextDocumentParams) -> () {
 		let uri = params.text_document.uri;
-		let doc = if let Ok(mut docs) = self.documents.write() && let Some(doc) = docs.get_mut(&uri) {
+		let doc = {
+			let Ok(mut docs) = self.documents.write() else {
+				return;
+			};
+
+			let Some(doc) = docs.get_mut(&uri) else {
+				return;
+			};
+
 			doc.has_unsaved_changes = false;
-			Some(&doc.clone())
-		}
-		else {
-			None
+			doc.clone()
 		};
 
-		if let Some(doc) = doc {
-			self.publish_diagnostics(&uri, doc).await;
-		}
+		self.publish_diagnostics(&uri, &doc).await;
 	}
 
 	async fn did_close(&self, params: DidCloseTextDocumentParams) -> () {
