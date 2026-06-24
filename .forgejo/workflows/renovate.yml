@@ -1,0 +1,25 @@
+name: Ren0vatem
+
+on:
+  schedule:
+    - cron: '2 * * * *'
+
+jobs:
+  ren0vatem:
+    runs-on: ubuntu-latest
+    steps:
+      - id: checkout
+        name: Checkout rep0
+        uses: https://github.com/actions/checkout@v7
+
+      - id: renovate
+        name: Run Renovate
+        uses: https://github.com/renovatebot/github-action@v46.1.16
+        with:
+          token: ${{ secrets.RENOVATEM_TOKEN }}
+        env:
+          RENOVATE_PLATFORM: 'forgejo'
+          RENOVATE_BRANCH_PREFIX: 'ren0vatem-'
+          RENOVATE_DRY_RUN: 'full' # TODO: for testing obviously lol
+          RENOVATE_ONBOARDING: false
+          RENOVATE_REQUIRE_CONFIG: 'optional'
