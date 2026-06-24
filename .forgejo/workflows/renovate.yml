@@ -22,7 +22,8 @@ jobs:
         name: Run Renovate
         run: renovate
         env:
-          LOG_LEVEL: debug
+          LOG_LEVEL: debug # TODO: for testing obviously lol
+          RENOVATE_ENDPOINT: ${{ forgejo.server_url }}
           RENOVATE_TOKEN: ${{ secrets.RENOVATEM_TOKEN }}
           RENOVATE_PLATFORM: 'forgejo'
           RENOVATE_BRANCH_PREFIX: 'ren0vatem-'
