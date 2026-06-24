@@ -36,31 +36,31 @@ const LANGUAGE_ID_MAP: &[(&str, &str)] = &[
 ];
 
 // These should always be preceded by some ASCII whitespace (or the start of the line) to be detected as a comment, so we can avoid (some) false positives in strings etc
-const COMMENT_MARKER_MAP: &[(&str, &[&str])] = &[
-	("c", &["//", "/*"]),
-	("cpp", &["//", "/*"]),
-	("csharp", &["//", "/*"]),
-	("css", &["/*"]),
-	("go", &["//", "/*"]),
-	("html", &["<!--"]),
-	("java", &["//", "/*"]),
-	("javascript", &["//", "/*"]),
-	("kotlin", &["//", "/*"]),
-	("less", &["//", "/*"]),
-	("lua", &["--"]),
-	("perl", &["#"]),
-	("php", &["//", "/*"]),
-	("powershell", &["#", "<#"]),
-	("python", &["#"]),
-	("ruby", &["#"]),
-	("rust", &["//", "/*"]),
-	("sass", &["//", "/*"]),
-	("scss", &["//", "/*"]),
-	("shell script", &["#"]),
-	("swift", &["//", "/*"]),
-	("tsx", &["//", "/*"]),
-	("typescript", &["//", "/*"]),
-	("yaml", &["#"]),
+const COMMENT_MARKER_MAP: &[(&str, &[(&str, Option<&str>)])] = &[
+	("c", &[("//", None), ("/*", Some("*/"))]),
+	("cpp", &[("//", None), ("/*", Some("*/"))]),
+	("csharp", &[("//", None), ("/*", Some("*/"))]),
+	("css", &[("/*", Some("*/"))]),
+	("go", &[("//", None), ("/*", Some("*/"))]),
+	("html", &[("<!--", Some("-->"))]),
+	("java", &[("//", None), ("/*", Some("*/"))]),
+	("javascript", &[("//", None), ("/*", Some("*/"))]),
+	("kotlin", &[("//", None), ("/*", Some("*/"))]),
+	("less", &[("//", None), ("/*", Some("*/"))]),
+	("lua", &[("--", None)]),
+	("perl", &[("#", None)]),
+	("php", &[("//", None), ("/*", Some("*/"))]),
+	("powershell", &[("#", None), ("<#", Some("#>"))]),
+	("python", &[("#", None)]),
+	("ruby", &[("#", None)]),
+	("rust", &[("//", None), ("/*", Some("*/"))]),
+	("sass", &[("//", None), ("/*", Some("*/"))]),
+	("scss", &[("//", None), ("/*", Some("*/"))]),
+	("shell script", &[("#", None)]),
+	("swift", &[("//", None), ("/*", Some("*/"))]),
+	("tsx", &[("//", None), ("/*", Some("*/"))]),
+	("typescript", &[("//", None), ("/*", Some("*/"))]),
+	("yaml", &[("#", None)]),
 ];
 
 #[derive(Debug)]
@@ -163,16 +163,26 @@ fn compilem_regexes(patterns: &[String]) -> Option<Regex> {
 		.ok();
 }
 
-fn find_comment_start(line: &str, marker: &str) -> Option<usize> {
+fn find_comment_text(line: &str, comment_markers: &(&str, Option<&str>)) -> Option<(usize, usize)> {
 	let line_butts = line.as_bytes();
-	let mut start = 0;
-	while let Some(pos) = line[start..].find(marker) {
-		let current_pos = start + pos;
-		if current_pos == 0 || line_butts[current_pos - 1].is_ascii_whitespace() {
-			return Some(current_pos);
+	let (start_marker, end_marker) = comment_markers;
+
+	let mut slice_start = 0;
+	while let Some(start_pos) = line[slice_start..].find(start_marker) {
+		let abs_start_pos = slice_start + start_pos;
+		slice_start = abs_start_pos + start_marker.len();
+		if abs_start_pos > 0 && !line_butts[abs_start_pos - 1].is_ascii_whitespace() {
+			continue;
 		}
 
-		start = current_pos + marker.len();
+		let slice_end = if let Some(end_marker) = end_marker && let Some(end_pos) = line[slice_start..].find(end_marker) {
+			slice_start + end_pos
+		}
+		else {
+			line.len()
+		};
+
+		return Some((slice_start, slice_end));
 	}
 
 	return None;
@@ -213,24 +223,25 @@ pub fn scan(document: &Document, linters: &HashMap<String, Linter>) -> Vec<Diagn
 		];
 
 		for (line_num, line) in text.lines().enumerate() {
-			let scan_offset = if linter.comments_only {
-				let Some(comment_start) = comment_markers.iter().filter_map(|m| find_comment_start(line, m)).min() else {
+			let scannable_range = if linter.comments_only {
+				let Some(comment_range) = comment_markers.iter().filter_map(|m| find_comment_text(line, m)).min() else {
 					continue;
 				};
 
-				comment_start
+				comment_range
 			}
 			else {
-				0
+				(0, line.len())
 			};
 
-			let scannable_region = &line[scan_offset..];
+			let (scan_start, scan_end) = scannable_range;
+			let scannable_text = &line[scan_start..scan_end];
 			for (regex, severity) in severity_groups {
 				let Some(regex) = regex else {
 					continue;
 				};
 
-				let Some(matches) = regex.captures(scannable_region) else {
+				let Some(matches) = regex.captures(scannable_text) else {
 					continue;
 				};
 
@@ -244,13 +255,13 @@ pub fn scan(document: &Document, linters: &HashMap<String, Linter>) -> Vec<Diagn
 					.unwrap_or("");
 
 				// LSP positions are based on UTF-16 code units by default
-				let start_char = line[..scan_offset + word_match.start()].encode_utf16().count();
+				let start_char = line[..scan_start + word_match.start()].encode_utf16().count();
 				let end_char = start_char + word.encode_utf16().count();
 				let display_msg = if message.is_empty() {
 					word.to_string()
 				}
 				else {
-					format!("{}: {}", word, message)
+					format!("{} — {}", word, message)
 				};
 
 				diagnostics.push(Diagnostic {

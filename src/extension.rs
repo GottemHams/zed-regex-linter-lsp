@@ -57,12 +57,12 @@ impl RegexLinterLspExtension {
 			return Ok(cached_path.clone());
 		}
 
-		let path = self.find_or_download_binary()?;
+		let path = Self::find_or_download_binary()?;
 		self.cached_lsp_server_path = Some(path.clone());
 		return Ok(path);
 	}
 
-	fn find_or_download_binary(&self) -> Result<String> {
+	fn find_or_download_binary() -> Result<String> {
 		let (os, arch) = zed::current_platform();
 		let platform_suffix = match (os, arch) {
 			(zed::Os::Windows, zed::Architecture::X8664) => "-windows-x64.exe",

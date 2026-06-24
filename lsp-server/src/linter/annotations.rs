@@ -8,8 +8,8 @@ pub fn config() -> LinterConfig {
 		comments_only: Some(true),
 		on_save: Some(false),
 		languages: None,
-		error: Some(["FIXME", "ERROR"].map(String::from).to_vec()),
-		warning: Some(["TODO", "@todo", "WIP", "WARNING"].map(String::from).to_vec()),
-		info: Some(["NOTE", "README", "INFO"].map(String::from).to_vec()),
+		error: Some(["\\bFIXME\\b", "\\bERROR\\b"].map(String::from).to_vec()),
+		warning: Some(["\\bTODO\\b", "@todo\\b", "\\bWIP\\b", "\\bWARNING\\b"].map(String::from).to_vec()),
+		info: Some(["\\bNOTE\\b", "\\bREADME\\b", "\\bINFO\\b"].map(String::from).to_vec()),
 	};
 }
