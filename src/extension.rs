@@ -1,4 +1,5 @@
 #![allow(clippy::needless_return)]
+#![allow(clippy::redundant_field_names)]
 #![allow(clippy::unused_unit)]
 
 use std::fs;

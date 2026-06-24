@@ -1,4 +1,5 @@
 #![allow(clippy::needless_return)]
+#![allow(clippy::redundant_field_names)]
 #![allow(clippy::unused_unit)]
 
 mod linter;
@@ -55,7 +56,7 @@ impl RegexLinterServer {
 
 	async fn publish_diagnostics(&self, uri: &Url, document: &Document) -> () {
 		let results = if let Ok(linters) = self.linters.read() {
-			linter::scan(&document, &linters)
+			linter::scan(document, &linters)
 		}
 		else {
 			vec![]
@@ -132,8 +133,8 @@ impl LanguageServer for RegexLinterServer {
 			None
 		};
 
-		if doc.is_some() {
-			self.publish_diagnostics(&uri, doc.unwrap()).await;
+		if let Some(doc) = doc {
+			self.publish_diagnostics(&uri, doc).await;
 		}
 	}
 
@@ -151,8 +152,8 @@ impl LanguageServer for RegexLinterServer {
 			None
 		};
 
-		if doc.is_some() {
-			self.publish_diagnostics(&uri, doc.unwrap()).await;
+		if let Some(doc) = doc {
+			self.publish_diagnostics(&uri, doc).await;
 		}
 	}
 
@@ -166,8 +167,8 @@ impl LanguageServer for RegexLinterServer {
 			None
 		};
 
-		if doc.is_some() {
-			self.publish_diagnostics(&uri, doc.unwrap()).await;
+		if let Some(doc) = doc {
+			self.publish_diagnostics(&uri, doc).await;
 		}
 	}
 

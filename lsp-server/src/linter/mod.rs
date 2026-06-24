@@ -7,8 +7,14 @@ use tower_lsp::lsp_types::*;
 
 use crate::Document;
 
+type LanguageName = &'static str;
+type LanguageId = &'static str;
+type BlockCommentStart = &'static str;
+type BlockCommentEnd = Option<&'static str>;
+type CommentMarkers = &'static [(BlockCommentStart, BlockCommentEnd)];
+
 // This is for mapping Zed languages in `settings.json` to LSP language IDs, so the config is a bit more intuitive
-const LANGUAGE_ID_MAP: &[(&str, &str)] = &[
+const LANGUAGE_ID_MAP: &[(LanguageName, LanguageId)] = &[
 	("C", "c"),
 	("C++", "cpp"),
 	("C#", "csharp"),
@@ -36,7 +42,7 @@ const LANGUAGE_ID_MAP: &[(&str, &str)] = &[
 ];
 
 // These should always be preceded by some ASCII whitespace (or the start of the line) to be detected as a comment, so we can avoid (some) false positives in strings etc
-const COMMENT_MARKER_MAP: &[(&str, &[(&str, Option<&str>)])] = &[
+const COMMENT_MARKER_MAP: &[(LanguageId, CommentMarkers)] = &[
 	("c", &[("//", None), ("/*", Some("*/"))]),
 	("cpp", &[("//", None), ("/*", Some("*/"))]),
 	("csharp", &[("//", None), ("/*", Some("*/"))]),
