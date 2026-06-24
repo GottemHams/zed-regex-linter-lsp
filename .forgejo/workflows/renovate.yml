@@ -1,12 +1,18 @@
 name: Ren0vatem
 
 on:
-  schedule:
-    - cron: '2 * * * *'
+  push: # TODO: for testing obviously lol
+    branches:
+      - master
+  #schedule:
+  #  - cron: '2 * * * *'
 
 jobs:
   ren0vatem:
-    runs-on: ubuntu-latest
+    runs-on: docker
+    container:
+      image: ghcr.io/renovate/renovate:43
+      options: --tmpfs /tmp:exec
     steps:
       - id: checkout
         name: Checkout rep0
@@ -14,10 +20,9 @@ jobs:
 
       - id: renovate
         name: Run Renovate
-        uses: https://github.com/renovatebot/github-action@v46.1.16
-        with:
-          token: ${{ secrets.RENOVATEM_TOKEN }}
+        run: renovate
         env:
+          RENOVATE_TOKEN: ${{ secrets.RENOVATEM_TOKEN }}
           RENOVATE_PLATFORM: 'forgejo'
           RENOVATE_BRANCH_PREFIX: 'ren0vatem-'
           RENOVATE_DRY_RUN: 'full' # TODO: for testing obviously lol
