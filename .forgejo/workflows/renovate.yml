@@ -14,9 +14,9 @@ jobs:
       image: ghcr.io/renovatebot/renovate:43
       options: --tmpfs /tmp:exec
     steps:
-      - id: checkout
-        name: Checkout rep0
-        uses: https://github.com/actions/checkout@v7
+      #- id: checkout
+      #  name: Checkout rep0
+      #  uses: https://github.com/actions/checkout@v7
 
       - id: renovate
         name: Run Renovate
@@ -26,6 +26,7 @@ jobs:
           RENOVATE_ENDPOINT: ${{ forgejo.server_url }}
           RENOVATE_TOKEN: ${{ secrets.RENOVATEM_TOKEN }}
           RENOVATE_PLATFORM: 'forgejo'
+          RENOVATE_REPOSITORIES: '["${{ forgejo.repository }}"]'
           RENOVATE_BRANCH_PREFIX: 'ren0vatem-'
           RENOVATE_DRY_RUN: 'full' # TODO: for testing obviously lol
           RENOVATE_ONBOARDING: false
