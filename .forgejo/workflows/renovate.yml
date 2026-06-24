@@ -4,8 +4,8 @@ on:
   push: # TODO: for testing obviously lol
     branches:
       - master
-  #schedule:
-  #  - cron: '2 * * * *'
+  schedule:
+    - cron: '30 */8 * * *'
 
 jobs:
   ren0vatem:
@@ -14,20 +14,15 @@ jobs:
       image: ghcr.io/renovatebot/renovate:43
       options: --tmpfs /tmp:exec
     steps:
-      #- id: checkout
-      #  name: Checkout rep0
-      #  uses: https://github.com/actions/checkout@v7
-
       - id: renovate
         name: Run Renovate
         run: renovate
         env:
+          RENOVATE_PLATFORM: 'forgejo'
           RENOVATE_ENDPOINT: ${{ forgejo.server_url }}
           RENOVATE_TOKEN: ${{ secrets.RENOVATEM_TOKEN }}
-          RENOVATE_PLATFORM: 'forgejo'
+          RENOVATE_GITHUB_COM_TOKEN: ${{ secrets.RENOVATEM_GITHUB_TOKEN }}
           RENOVATE_REPOSITORIES: '["${{ forgejo.repository }}"]'
           RENOVATE_BRANCH_PREFIX: 'ren0vatem-'
-          RENOVATE_DRY_RUN: 'full' # TODO: for testing obviously lol
           RENOVATE_ONBOARDING: false
           RENOVATE_REQUIRE_CONFIG: 'optional'
-          RENOVATE_GITHUB_COM_TOKEN: ${{ secrets.RENOVATEM_GITHUB_TOKEN }}
