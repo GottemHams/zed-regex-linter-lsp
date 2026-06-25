@@ -196,14 +196,14 @@ impl LanguageServer for RegexLinterServer {
 			// The change contains the **full** text
 			doc.text = Arc::from(change.text);
 			doc.version = text_document.version;
-			self.lintem(&uri, &doc);
+			self.lintem(&uri, doc);
 		}
 	}
 
 	async fn did_save(&self, params: DidSaveTextDocumentParams) -> () {
 		let uri = params.text_document.uri;
 		if let Ok(docs) = self.documents.write() && let Some(doc) = docs.get(&uri) {
-			self.lintem(&uri, &doc);
+			self.lintem(&uri, doc);
 		}
 	}
 
