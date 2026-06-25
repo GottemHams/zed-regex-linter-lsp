@@ -26,13 +26,10 @@ You can simply install it directly via Zed > `Extensions` > `Regex Linter LSP`.
 					// The only thing we look for is any ASCII whitespace preceding the marker (or the start of the line), so common markers like `//` at least won't trigger on URLs
 					// The default is `true` regardless
 					"comments_only": false,
-					
-					// Only lint when the file is saved instead of real-time (default is `false`)
-					"on_save": true,
 
 					// Only apply to these languages, based on Zed's language names (default is all languages the extension knows about, i.e. what's in `extension.toml`)
 					"languages": ["Rust"],
-	
+
 					// The default for all of these is just an empty list (obviously)
 					// Note that the regexes are case-**sensitive**, but you can make something case-insensitive by using the `(?i)` flag in a separate group
 					// Also, you should prolly avoid using named capture groups because they might conflict with our own (you can't really do anything with them anyway)

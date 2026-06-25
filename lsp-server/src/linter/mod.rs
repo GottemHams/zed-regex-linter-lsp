@@ -9,9 +9,9 @@ use crate::Document;
 
 type LanguageName = &'static str;
 type LanguageId = &'static str;
-type BlockCommentStart = &'static str;
+type CommentStart = &'static str;
 type BlockCommentEnd = Option<&'static str>;
-type CommentMarkers = &'static [(BlockCommentStart, BlockCommentEnd)];
+type CommentMarkers = (CommentStart, BlockCommentEnd);
 
 // This is for mapping Zed languages in `settings.json` to LSP language IDs, so the config is a bit more intuitive
 const LANGUAGE_ID_MAP: &[(LanguageName, LanguageId)] = &[
@@ -42,7 +42,7 @@ const LANGUAGE_ID_MAP: &[(LanguageName, LanguageId)] = &[
 ];
 
 // These should always be preceded by some ASCII whitespace (or the start of the line) to be detected as a comment, so we can avoid (some) false positives in strings etc
-const COMMENT_MARKER_MAP: &[(LanguageId, CommentMarkers)] = &[
+const COMMENT_MARKER_MAP: &[(LanguageId, &[CommentMarkers])] = &[
 	("c", &[("//", None), ("/*", Some("*/"))]),
 	("cpp", &[("//", None), ("/*", Some("*/"))]),
 	("csharp", &[("//", None), ("/*", Some("*/"))]),
@@ -73,7 +73,6 @@ const COMMENT_MARKER_MAP: &[(LanguageId, CommentMarkers)] = &[
 pub struct Linter {
 	enabled: bool,
 	comments_only: bool,
-	on_save: bool,
 	languages: Option<Vec<String>>,
 
 	// Any of these can be `None` if regex compilation fails
@@ -86,7 +85,6 @@ pub struct Linter {
 struct LinterConfig {
 	enabled: Option<bool>,
 	comments_only: Option<bool>,
-	on_save: Option<bool>,
 	languages: Option<Vec<String>>,
 	error: Option<Vec<String>>,
 	warning: Option<Vec<String>>,
@@ -101,10 +99,6 @@ impl LinterConfig {
 
 		if let Some(comments_only) = other.comments_only {
 			self.comments_only = Some(comments_only);
-		}
-
-		if let Some(on_save) = other.on_save {
-			self.on_save = Some(on_save);
 		}
 
 		if let Some(languages) = other.languages {
@@ -136,7 +130,6 @@ pub fn parse_config(settings: &serde_json::Value) -> HashMap<String, Linter> {
 		.map(|(name, config)| (name, Linter {
 			enabled: config.enabled.unwrap_or(true),
 			comments_only: config.comments_only.unwrap_or(true),
-			on_save: config.on_save.unwrap_or(false),
 			languages: config.languages.map(|langs| {
 				// Languages found in `LANGUAGE_ID_MAP` will be mapped to their LSP language ID counterparts, otherwise we'll retain the original values (so you could also specify IDs directly)
 				langs.into_iter().map(|lang| {
@@ -160,8 +153,8 @@ fn compilem_regexes(patterns: &[String]) -> Option<Regex> {
 	}
 
 	// Sort by longest patterns first so more specific matches take precedence
-	let mut sorted: Vec<&str> = patterns.iter().map(|s| s.as_ref()).collect();
-	sorted.sort_unstable_by_key(|b| std::cmp::Reverse(b.len()));
+	let mut sorted: Vec<&str> = patterns.iter().map(|pattern| pattern.as_ref()).collect();
+	sorted.sort_unstable_by_key(|pattern| std::cmp::Reverse(pattern.len()));
 
 	let full_pattern = format!(r"(?P<word>{})(?::|\s+-+)?\s*(?P<message>.*)", sorted.join("|"));
 	return Regex::new(&full_pattern)
@@ -169,7 +162,7 @@ fn compilem_regexes(patterns: &[String]) -> Option<Regex> {
 		.ok();
 }
 
-fn find_comment_text(line: &str, comment_markers: &(&str, Option<&str>)) -> Option<(usize, usize)> {
+fn find_comment_text(line: &str, comment_markers: &CommentMarkers) -> Option<(usize, usize)> {
 	let line_butts = line.as_bytes();
 	let (start_marker, end_marker) = comment_markers;
 
@@ -197,7 +190,6 @@ fn find_comment_text(line: &str, comment_markers: &(&str, Option<&str>)) -> Opti
 pub fn scan(document: &Document, linters: &HashMap<String, Linter>) -> Vec<Diagnostic> {
 	let text = &document.text;
 	let language_id = &document.language_id;
-	let saved = !document.has_unsaved_changes;
 
 	let comment_markers = COMMENT_MARKER_MAP.iter()
 		.find(|(lang_id, _)| *lang_id == language_id)
@@ -207,10 +199,6 @@ pub fn scan(document: &Document, linters: &HashMap<String, Linter>) -> Vec<Diagn
 	let mut diagnostics = Vec::new();
 	for (source, linter) in linters {
 		if !linter.enabled {
-			continue;
-		}
-
-		if linter.on_save && !saved {
 			continue;
 		}
 
@@ -230,7 +218,7 @@ pub fn scan(document: &Document, linters: &HashMap<String, Linter>) -> Vec<Diagn
 
 		for (line_num, line) in text.lines().enumerate() {
 			let scannable_range = if linter.comments_only {
-				let Some(comment_range) = comment_markers.iter().filter_map(|m| find_comment_text(line, m)).min() else {
+				let Some(comment_range) = comment_markers.iter().filter_map(|markers| find_comment_text(line, markers)).min() else {
 					continue;
 				};
 
@@ -257,7 +245,7 @@ pub fn scan(document: &Document, linters: &HashMap<String, Linter>) -> Vec<Diagn
 
 				let word = word_match.as_str();
 				let message = matches.name("message")
-					.map(|m| m.as_str().trim())
+					.map(|message| message.as_str().trim())
 					.unwrap_or("");
 
 				// LSP positions are based on UTF-16 code units by default
