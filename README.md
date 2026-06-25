@@ -18,7 +18,7 @@ You can simply install it directly via Zed > `Extensions` > `Regex Linter LSP`.
 				// The key will be used as the LSP's "source", which is the name you see on diagnostics
 				"my-cool-linter": {
 					// **All** settings are technically optional, but it won't do much without any regex patterns
-					// Default is `true` of course
+					// Default is `true` of course, except for built-in linters (see further below)
 					"enabled": false,
 
 					// For only matching within comments, which is based off a hardcoded list of comment markers for every language we support
@@ -52,6 +52,8 @@ You can simply install it directly via Zed > `Extensions` > `Regex Linter LSP`.
 	},
 }
 ```
+
+For every given linter we'll only report 1 issue per severity level per line, so e.g. `// MY_ERROR MY_CRITICAL MY_INFO` will only trigger diagnostics for `MY_ERROR` and `MY_INFO`.
 
 ## Development setup
 
