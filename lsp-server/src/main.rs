@@ -196,7 +196,7 @@ impl LanguageServer for RegexLinterServer {
 
 		// Let's ensure any out-of-order requests don't revert that shit to an older version
 		// We also won't re-lint as the results will most likely be incorrect anyway
-		if let Ok(mut docs) = self.documents.write() && let Some(doc) = docs.get_mut(&uri) && doc.version != text_document.version {
+		if let Ok(mut docs) = self.documents.write() && let Some(doc) = docs.get_mut(&uri) && text_document.version > doc.version {
 			// The change contains the **full** text
 			doc.text = Arc::from(change.text);
 			doc.version = text_document.version;

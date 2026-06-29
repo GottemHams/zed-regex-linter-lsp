@@ -56,7 +56,7 @@ You can simply install it directly via Zed > `Extensions` > `Regex Linter LSP`.
 
 For every given linter it'll only report 1 issue per severity level per line, so e.g. `// MY_ERROR MY_CRITICAL MY_INFO` will only trigger diagnostics for `MY_ERROR` and `MY_INFO`.
 
-The comment matcher is somewhat aware of block comments, but this doesn't span across multiple lines because the LSP still only deals with individual lines. Nested comments can prevent correctly extracting the actual message part, since it only cares about the first comment on the line. This is just a general-purpose "linter", anything that's truly aware of any language's syntax would need a separate, full-fledged LSP anyway.
+The comment matcher is somewhat aware of block comments, but this doesn't span across multiple lines because the LSP still only deals with individual lines. Nested comments can prevent correctly extracting the actual message part, since it only cares about the first comment on the line. This is just a general-purpose "linter", anything that's truly aware of any language's syntax would need a separate, full-fledged LSP anyway. It does support parsing some "label delimiters" (`:` or any amount of `-`) so you can do things like `// TODO: foo` or `# FIXME -- bar` and it'll try to extract the actual message part from that.
 
 ## Development setup
 
