@@ -1,6 +1,6 @@
-# The fuck is this
+# zed-regex-linter-lsp
 
-This is a language server that acts as a (real-time) linter for the Zed editor, where you can configure your own linters with just a few JSON options. Matches are (obviously) handled via regex and will be reported back to the editor as inline diagnostics.
+This is a language server that acts as a (real-time) "linter" for the Zed editor, where you can configure your own linters with just a few JSON options. Matches are (obviously) handled via regex and will be reported back to the editor as inline diagnostics.
 
 There's currently **one** whole default linter: `annotations`, which is for reporting comments like `// TODO` and `# FIXME`. It's disabled by default though.
 
@@ -53,7 +53,9 @@ You can simply install it directly via Zed > `Extensions` > `Regex Linter LSP`.
 }
 ```
 
-For every given linter we'll only report 1 issue per severity level per line, so e.g. `// MY_ERROR MY_CRITICAL MY_INFO` will only trigger diagnostics for `MY_ERROR` and `MY_INFO`.
+For every given linter it'll only report 1 issue per severity level per line, so e.g. `// MY_ERROR MY_CRITICAL MY_INFO` will only trigger diagnostics for `MY_ERROR` and `MY_INFO`.
+
+The comment matcher is somewhat aware of block comments, but this doesn't span across multiple lines because the LSP still only deals with individual lines. Nested comments can prevent correctly extracting the actual message part, since it only cares about the first comment on the line. This is just a general-purpose "linter", anything that's truly aware of any language's syntax would need a separate, full-fledged LSP anyway.
 
 ## Development setup
 
@@ -75,3 +77,14 @@ There's a `compilem.sh` script in both the repo root and `lsp-server`, you can u
 	},
 }
 ```
+
+### Adding a new language
+
+1. `extension.toml`: update the `languages` array to include the new language
+2. `lsp-server/src/linter/mod.rs`: add corresponding entries to the `LANGUAGE_ID_MAP` and `COMMENT_MARKER_MAP` constants
+
+### Adding a new default linter
+
+1. Copy one of the existing linters inside `lsp-server/src/linter` and rename it to something descriptive
+2. Change the `SOURCE` and config as necessary, but note that `enabled` should **always** default to `false`
+3. `lsp-server/src/linter/mod.rs`: declare the new module at the very top of the file, and update the first few lines of `parse_config()` to include a new line with `configs.insert()`
