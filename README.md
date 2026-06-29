@@ -28,6 +28,7 @@ You can simply install it directly via Zed > `Extensions` > `Regex Linter LSP`.
 					"comments_only": false,
 
 					// Only apply to these languages, based on Zed's language names (default is all languages the extension knows about, i.e. what's in `extension.toml`)
+					// You can also use Zed's own `language_servers` setting in `settings.json` to exclude some languages and prevent even spawning an executable
 					"languages": ["Rust"],
 
 					// The default for all of these is just an empty list (obviously)
