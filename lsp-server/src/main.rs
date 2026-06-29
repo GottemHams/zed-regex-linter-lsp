@@ -206,7 +206,7 @@ impl LanguageServer for RegexLinterServer {
 
 	async fn did_save(&self, params: DidSaveTextDocumentParams) -> () {
 		let uri = params.text_document.uri;
-		if let Ok(docs) = self.documents.write() && let Some(doc) = docs.get(&uri) {
+		if let Ok(docs) = self.documents.read() && let Some(doc) = docs.get(&uri) {
 			self.lintem(&uri, doc);
 		}
 	}
