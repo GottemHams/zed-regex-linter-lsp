@@ -86,6 +86,8 @@ impl RegexLinterServer {
 
 		task.document_version = current_doc.version;
 		task.handle = Some(tokio::spawn(async move {
+			// We don't have any special semantics for change vs save, we always run on the latest document version
+			// This means we don't have to come up with a complex debouncing scheme and can simply treat all events the same
 			tokio::time::sleep(DEBOUNCE_MS).await;
 
 			// We'll check the exact version here, because that's what we were originally scheduled for
@@ -192,7 +194,9 @@ impl LanguageServer for RegexLinterServer {
 			return;
 		};
 
-		if let Ok(mut docs) = self.documents.write() && let Some(doc) = docs.get_mut(&uri) {
+		// Let's ensure any out-of-order requests don't revert that shit to an older version
+		// We also won't re-lint as the results will most likely be incorrect anyway
+		if let Ok(mut docs) = self.documents.write() && let Some(doc) = docs.get_mut(&uri) && doc.version != text_document.version {
 			// The change contains the **full** text
 			doc.text = Arc::from(change.text);
 			doc.version = text_document.version;
