@@ -22,7 +22,7 @@ const DEBOUNCE_MS: Duration = Duration::from_millis(300);
 #[derive(Clone)]
 struct Document {
 	language_id: String,
-	text: Arc<str>, // Let's put this in an Arc to avoid ever copying the full text
+	text: Arc<str>, // Let's put this in an `Arc` to avoid ever copying the full text
 	version: i32,
 }
 
@@ -43,7 +43,7 @@ struct RegexLinterServer {
 impl RegexLinterServer {
 	fn new(client: Client) -> Self {
 		// We can just pass a null value to get the default configs =]]
-		let linters = linter::parse_config(&serde_json::Value::Null);
+		let linters = linter::parsem_config(&serde_json::Value::Null);
 		Self::printem_linter_info(&linters);
 		return Self {
 			client: client,
@@ -91,16 +91,13 @@ impl RegexLinterServer {
 			tokio::time::sleep(DEBOUNCE_MS).await;
 
 			// We'll check the exact version here, because that's what we were originally scheduled for
-			let expected_version = this.documents.read()
-				.ok()
-				.and_then(|docs| docs.get(&current_url).map(|doc| doc.version));
-
+			let expected_version = this.documents.read().ok().and_then(|docs| docs.get(&current_url).map(|doc| doc.version));
 			if expected_version != Some(current_doc.version) {
 				return;
 			}
 
 			let results = if let Ok(linters) = this.linters.read() {
-				linter::scan(&current_doc, &linters)
+				linter::scannem(&current_doc, &linters)
 			}
 			else {
 				vec![]
@@ -143,12 +140,22 @@ impl LanguageServer for RegexLinterServer {
 
 	async fn shutdown(&self) -> LspResult<()> {
 		// Prolly not really necessary but let's bnice =]
-		if let Ok(mut linters) = self.linters.write() {
-			linters.clear();
+		if let Ok(mut tasks) = self.lint_tasks.lock() {
+			for task in tasks.values() {
+				if let Some(handle) = &task.handle {
+					handle.abort();
+				}
+			}
+
+			tasks.clear();
 		}
 
 		if let Ok(mut docs) = self.documents.write() {
 			docs.clear();
+		}
+
+		if let Ok(mut linters) = self.linters.write() {
+			linters.clear();
 		}
 
 		eprintln!("Shutdown complete");
@@ -157,9 +164,9 @@ impl LanguageServer for RegexLinterServer {
 
 	async fn did_change_configuration(&self, params: DidChangeConfigurationParams) -> () {
 		eprintln!("Configuration changed, reloading linters...");
-		let parsed_settings = params.settings.as_object().and_then(|settings| settings.get(LANGUAGE_SERVER_ID));
-		if let Some(parsed_settings) = parsed_settings && let Ok(mut linters) = self.linters.write() {
-			*linters = linter::parse_config(parsed_settings);
+		let lsp_settings = params.settings.get(LANGUAGE_SERVER_ID);
+		if let Some(lsp_settings) = lsp_settings && let Ok(mut linters) = self.linters.write() {
+			*linters = linter::parsem_config(lsp_settings);
 			Self::printem_linter_info(&linters);
 		}
 
@@ -173,23 +180,23 @@ impl LanguageServer for RegexLinterServer {
 	async fn did_open(&self, params: DidOpenTextDocumentParams) -> () {
 		let text_document = params.text_document;
 		let uri = text_document.uri;
-		let Ok(mut docs) = self.documents.write() else {
-			return;
-		};
+		if let Ok(mut docs) = self.documents.write() {
+			let new_doc = Document {
+				language_id: text_document.language_id,
+				text: Arc::from(text_document.text),
+				version: text_document.version,
+			};
 
-		let new_doc = Document {
-			language_id: text_document.language_id,
-			text: Arc::from(text_document.text),
-			version: text_document.version,
-		};
-
-		docs.insert(uri.clone(), new_doc.clone());
-		self.lintem(&uri, &new_doc);
+			docs.insert(uri.clone(), new_doc.clone());
+			self.lintem(&uri, &new_doc);
+		}
 	}
 
 	async fn did_change(&self, params: DidChangeTextDocumentParams) -> () {
 		let text_document = params.text_document;
 		let uri = text_document.uri;
+
+		// The change contains the **full** text, so there should be only one
 		let Some(change) = params.content_changes.into_iter().next() else {
 			return;
 		};
@@ -197,7 +204,6 @@ impl LanguageServer for RegexLinterServer {
 		// Let's ensure any out-of-order requests don't revert that shit to an older version
 		// We also won't re-lint as the results will most likely be incorrect anyway
 		if let Ok(mut docs) = self.documents.write() && let Some(doc) = docs.get_mut(&uri) && text_document.version > doc.version {
-			// The change contains the **full** text
 			doc.text = Arc::from(change.text);
 			doc.version = text_document.version;
 			self.lintem(&uri, doc);

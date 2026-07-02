@@ -92,7 +92,7 @@ struct LinterConfig {
 }
 
 impl LinterConfig {
-	fn merge(&mut self, other: LinterConfig) -> () {
+	fn mergem(&mut self, other: LinterConfig) -> () {
 		if let Some(enabled) = other.enabled {
 			self.enabled = Some(enabled);
 		}
@@ -111,40 +111,37 @@ impl LinterConfig {
 	}
 }
 
-pub fn parse_config(settings: &serde_json::Value) -> HashMap<String, Linter> {
+pub fn parsem_config(settings: &serde_json::Value) -> HashMap<String, Linter> {
 	let mut configs = HashMap::new();
 	configs.insert(annotations::SOURCE.to_string(), annotations::config());
 
-	if let Some(obj) = settings.as_object() {
-		for (key, value) in obj {
+	if let Some(settings) = settings.as_object() {
+		for (key, value) in settings {
 			let linter_config = serde_json::from_value::<LinterConfig>(value.clone())
 				.inspect_err(|e| eprintln!("Failed to parse config for linter '{}': {}", key, e));
 
 			if let Ok(linter_config) = linter_config {
-				configs.entry(key.to_string()).or_default().merge(linter_config);
+				configs.entry(key.to_string()).or_default().mergem(linter_config);
 			}
 		}
 	}
 
-	return configs.into_iter()
-		.map(|(name, config)| (name, Linter {
-			enabled: config.enabled.unwrap_or(true),
-			comments_only: config.comments_only.unwrap_or(true),
-			languages: config.languages.map(|langs| {
-				// Languages found in `LANGUAGE_ID_MAP` will be mapped to their LSP language ID counterparts, otherwise we'll retain the original values (so you could also specify IDs directly)
-				langs.into_iter().map(|lang| {
-					LANGUAGE_ID_MAP.iter()
-						.find(|(zed_lang, _)| *zed_lang == lang)
-						.map(|(_, lsp_lang)| lsp_lang.to_string())
-						.unwrap_or(lang)
-				})
-				.collect()
-			}),
-			error_regex: compilem_regexes(&config.error.unwrap_or_default()),
-			warning_regex: compilem_regexes(&config.warning.unwrap_or_default()),
-			info_regex: compilem_regexes(&config.info.unwrap_or_default()),
-		}))
-		.collect();
+	return configs.into_iter().map(|(name, config)| (name, Linter {
+		enabled: config.enabled.unwrap_or(true),
+		comments_only: config.comments_only.unwrap_or(true),
+		languages: config.languages.map(|langs| {
+			// Languages found in `LANGUAGE_ID_MAP` will be mapped to their LSP language ID counterparts, otherwise we'll retain the original values (so you could also specify IDs directly)
+			langs.into_iter().map(|lang| {
+				LANGUAGE_ID_MAP.iter()
+					.find(|(zed_lang, _)| *zed_lang == lang)
+					.map(|(_, lsp_lang)| lsp_lang.to_string())
+					.unwrap_or(lang)
+			}).collect()
+		}),
+		error_regex: compilem_regexes(&config.error.unwrap_or_default()),
+		warning_regex: compilem_regexes(&config.warning.unwrap_or_default()),
+		info_regex: compilem_regexes(&config.info.unwrap_or_default()),
+	})).collect();
 }
 
 fn compilem_regexes(patterns: &[String]) -> Option<Regex> {
@@ -187,7 +184,7 @@ fn find_comment_text(line: &str, comment_markers: &CommentMarkers) -> Option<(us
 	return None;
 }
 
-pub fn scan(document: &Document, linters: &HashMap<String, Linter>) -> Vec<Diagnostic> {
+pub fn scannem(document: &Document, linters: &HashMap<String, Linter>) -> Vec<Diagnostic> {
 	let text = &document.text;
 	let language_id = &document.language_id;
 
@@ -231,11 +228,7 @@ pub fn scan(document: &Document, linters: &HashMap<String, Linter>) -> Vec<Diagn
 			let (scan_start, scan_end) = scannable_range;
 			let scannable_text = &line[scan_start..scan_end];
 			for (regex, severity) in severity_groups {
-				let Some(regex) = regex else {
-					continue;
-				};
-
-				let Some(matches) = regex.captures(scannable_text) else {
+				let Some(matches) = regex.as_ref().and_then(|regex| regex.captures(scannable_text)) else {
 					continue;
 				};
 
@@ -244,9 +237,7 @@ pub fn scan(document: &Document, linters: &HashMap<String, Linter>) -> Vec<Diagn
 				};
 
 				let word = word_match.as_str();
-				let message = matches.name("message")
-					.map(|message| message.as_str().trim())
-					.unwrap_or("");
+				let message = matches.name("message").map(|message| message.as_str().trim()).unwrap_or("");
 
 				// LSP positions are based on UTF-16 code units by default
 				let start_char = line[..scan_start + word_match.start()].encode_utf16().count();

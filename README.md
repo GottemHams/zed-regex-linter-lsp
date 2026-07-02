@@ -88,4 +88,4 @@ There's a `compilem.sh` script in both the repo root and `lsp-server`, you can u
 
 1. Copy one of the existing linters inside `lsp-server/src/linter` and rename it to something descriptive
 2. Change the `SOURCE` and config as necessary, but note that `enabled` should **always** default to `false`
-3. `lsp-server/src/linter/mod.rs`: declare the new module at the very top of the file, and update the first few lines of `parse_config()` to include a new line with `configs.insert()`
+3. `lsp-server/src/linter/mod.rs`: declare the new module at the very top of the file, and update the first few lines of `parsem_config()` to include a new line with `configs.insert()`
