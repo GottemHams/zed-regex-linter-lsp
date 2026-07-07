@@ -237,7 +237,7 @@ pub fn scannem(document: &Document, linters: &HashMap<String, Linter>) -> Vec<Di
 				};
 
 				let word = word_match.as_str();
-				let message = matches.name("message").map(|message| message.as_str().trim()).unwrap_or("");
+				let message = matches.name("message").and_then(|message| Some(message.as_str().trim())).unwrap_or("");
 
 				// LSP positions are based on UTF-16 code units by default
 				let start_char = line[..scan_start + word_match.start()].encode_utf16().count();
