@@ -1,3 +1,4 @@
+#![allow(clippy::bind_instead_of_map)]
 #![allow(clippy::needless_return)]
 #![allow(clippy::redundant_field_names)]
 #![allow(clippy::unused_unit)]
