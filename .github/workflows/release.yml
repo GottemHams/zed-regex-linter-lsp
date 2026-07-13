@@ -63,7 +63,7 @@ jobs:
         name: Build LSP Server
         run: |
           cd lsp-server
-          ${{ matrix.use_cross && 'cross' || 'cargo' }} build --release --target "${{ matrix.target }}"
+          ${{ matrix.use_cross && 'cross' || 'cargo' }} build --target "${{ matrix.target }}" --release
 
       - id: create-archive
         name: Create archive

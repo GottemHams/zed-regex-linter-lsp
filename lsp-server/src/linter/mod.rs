@@ -5,7 +5,7 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use tower_lsp::lsp_types::*;
 
-use crate::Document;
+use crate::DocumentContent;
 
 type LanguageName = &'static str;
 type LanguageId = &'static str;
@@ -184,9 +184,9 @@ fn find_comment_text(line: &str, comment_markers: &CommentMarkers) -> Option<(us
 	return None;
 }
 
-pub fn scannem(document: &Document, linters: &HashMap<String, Linter>) -> Vec<Diagnostic> {
-	let text = &document.text;
-	let language_id = &document.language_id;
+pub fn scannem(document_content: &DocumentContent, linters: &HashMap<String, Linter>) -> Vec<Diagnostic> {
+	let text = &document_content.text;
+	let language_id = &document_content.language_id;
 
 	let comment_markers = COMMENT_MARKER_MAP.iter()
 		.find(|(lang_id, _)| *lang_id == language_id)

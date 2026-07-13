@@ -1,0 +1,12 @@
+[alias]
+zrl-srv-lint = "clippy --manifest-path lsp-server/Cargo.toml -- -D warnings"
+zrl-srv-lint-alltargets = "clippy --manifest-path lsp-server/Cargo.toml --all-targets -- -D warnings"
+
+zrl-srv-build = "build --manifest-path lsp-server/Cargo.toml"
+zrl-srv-build-alltargets = "zrl-srv-build --all-targets"
+zrl-srv-build-release = "zrl-srv-build --release"
+
+zrl-ext-lint = "clippy --target wasm32-wasip2 -- -D warnings"
+
+zrl-ext-build = "build --target=wasm32-wasip2"
+zrl-ext-build-release = "zrl-ext-build --release"

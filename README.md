@@ -62,14 +62,17 @@ The comment matcher is somewhat aware of block comments, but this doesn't span a
 
 If you want to build the **extension** manually then **you'll need support for the `wasm32-wasip2` Rust target**. This is not necessary for the LSP server itself.
 
-There's a `compilem.sh` script in both the repo root and `lsp-server`, you can use that to generate release builds. Then in your Zed settings, set the path to the local LSP binary if needed:
+There are some [Cargo aliases](./.cargo/config.toml) to simplify linting and building, but they **must be run from the root** of the repo. Tab completion is also supported for such aliases, but note that your shell might have cached the completions if you ran `cargo` before `cd`'ing to the repo root. For (at least) Bash you can run `complete -r cargo` to clear the cache, and other shells should have similar commands.
+
+You may wanna use release builds for better optimisations (`cargo zrl-srv-build-release` and `cargo zrl-ext-build-release`). Then in your Zed settings, set the path to the local LSP binary as needed:
 
 ```jsonc
 {
 	"lsp": {
 		"regex-linter": {
 			"binary": {
-				"path": "/some/path/to/repo/root/lsp-server/target/release/regex-linter-lsp-server"
+				//"path": "/some/path/to/repo/root/lsp-server/target/debug/regex-linter-lsp-server",
+				"path": "/some/path/to/repo/root/lsp-server/target/release/regex-linter-lsp-server",
 			},
 			"settings": {
 				// ...

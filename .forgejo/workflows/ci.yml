@@ -10,9 +10,6 @@ jobs:
   lsp-server:
     name: LSP Server
     runs-on: docker
-    defaults:
-      run:
-        working-directory: lsp-server
     steps:
       - id: checkout
         name: Checkout rep0
@@ -26,11 +23,11 @@ jobs:
 
       - id: clippy
         name: Run clippy
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo zrl-srv-lint-alltargets
 
       - id: buildem
         name: Build that shit
-        run: cargo build --all-targets
+        run: cargo zrl-srv-build-alltargets
 
   extension:
     name: Extension
@@ -49,8 +46,8 @@ jobs:
 
       - id: clippy
         name: Run clippy
-        run: cargo clippy --target wasm32-wasip2 -- -D warnings
+        run: cargo zrl-ext-lint
 
       - id: buildem
         name: Build that shit
-        run: cargo build --target=wasm32-wasip2
+        run: cargo zrl-ext-build

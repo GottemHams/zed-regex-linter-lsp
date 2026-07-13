@@ -7,7 +7,7 @@ mod linter;
 
 use linter::Linter;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use tokio::io::{stdin, stdout};
 use tokio::task::AbortHandle;
@@ -15,13 +15,13 @@ use tower_lsp::jsonrpc::Result as LspResult;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer, LspService, Server};
 
-const VERSION: &str = env!("CARGO_PKG_VERSION");
 const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 const LANGUAGE_SERVER_ID: &str = "regex-linter";
 const DEBOUNCE_MS: Duration = Duration::from_millis(300);
 
 #[derive(Clone)]
-struct Document {
+struct DocumentContent {
 	language_id: String,
 	text: Arc<str>, // Let's put this in an `Arc` to avoid ever copying the full text
 	version: i32,
@@ -33,12 +33,25 @@ struct LintTask {
 	handle: Option<AbortHandle>,
 }
 
+struct Document {
+	content: DocumentContent,
+	lint_task: Option<LintTask>,
+}
+
+impl Document {
+	fn new(content: DocumentContent) -> Self {
+		return Self {
+			content: content,
+			lint_task: None,
+		};
+	}
+}
+
 #[derive(Clone)]
 struct RegexLinterServer {
 	client: Client,
 	linters: Arc<RwLock<HashMap<String, Linter>>>,
 	documents: Arc<RwLock<HashMap<Url, Document>>>,
-	lint_tasks: Arc<Mutex<HashMap<Url, LintTask>>>,
 }
 
 impl RegexLinterServer {
@@ -50,7 +63,6 @@ impl RegexLinterServer {
 			client: client,
 			linters: Arc::new(RwLock::new(linters)),
 			documents: Arc::new(RwLock::new(HashMap::new())),
-			lint_tasks: Arc::new(Mutex::new(HashMap::new())),
 		};
 	}
 
@@ -66,12 +78,16 @@ impl RegexLinterServer {
 		}
 	}
 
-	fn lintem(&self, url: &Url, document: &Document) -> () {
+	fn lintem(&self, url: &Url) -> () {
+		let mut docs = self.documents.write().unwrap();
+		let Some(doc) = docs.get_mut(url) else {
+			return;
+		};
+
 		// Repeated requests for the same (latest) document version are fine, as long as we don't interrupt existing runs
-		let mut tasks = self.lint_tasks.lock().unwrap();
-		let task = tasks.entry(url.clone()).or_default();
+		let task = doc.lint_task.get_or_insert_default();
 		if let Some(handle) = &task.handle && !handle.is_finished() {
-			if task.document_version >= document.version {
+			if task.document_version >= doc.content.version {
 				return;
 			}
 
@@ -80,26 +96,29 @@ impl RegexLinterServer {
 
 		let this = self.clone();
 		let current_url = url.clone();
-		let current_doc = document.clone();
-
-		task.document_version = current_doc.version;
+		let current_content = doc.content.clone();
+		task.document_version = current_content.version;
 		task.handle = Some(tokio::spawn(async move {
 			// We don't have any special semantics for change vs save, we always run on the latest document version
 			// This means we don't have to come up with a complex debouncing scheme and can simply treat all events the same
 			tokio::time::sleep(DEBOUNCE_MS).await;
 
 			// We'll check the exact version here, because that's what we were originally scheduled for
-			let expected_version = this.documents.read().unwrap().get(&current_url).and_then(|doc| Some(doc.version));
-			if expected_version != Some(current_doc.version) {
+			let expected_version = this.documents.read().unwrap().get(&current_url).and_then(|doc| Some(doc.content.version));
+			if expected_version != Some(current_content.version) {
 				return;
 			}
 
-			let results = linter::scannem(&current_doc, &this.linters.read().unwrap());
-			this.client.publish_diagnostics(current_url.clone(), results, Some(current_doc.version)).await;
+			let results = linter::scannem(&current_content, &this.linters.read().unwrap());
+			this.client.publish_diagnostics(current_url.clone(), results, Some(current_content.version)).await;
 		}).abort_handle());
 	}
 
 	async fn clearem_lint(&self, url: &Url) -> () {
+		if let Some(doc) = self.documents.write().unwrap().remove(url) && let Some(task) = doc.lint_task && let Some(handle) = task.handle {
+			handle.abort();
+		}
+
 		self.client.publish_diagnostics(url.clone(), vec![], None).await;
 	}
 }
@@ -132,17 +151,15 @@ impl LanguageServer for RegexLinterServer {
 
 	async fn shutdown(&self) -> LspResult<()> {
 		// All this cleanup is prolly not really necessary but let's bnice =]
-		let mut tasks = self.lint_tasks.lock().unwrap();
-		for task in tasks.values() {
-			if let Some(handle) = &task.handle && !handle.is_finished() {
+		let mut docs = self.documents.write().unwrap();
+		for doc in docs.values() {
+			if let Some(task) = &doc.lint_task && let Some(handle) = &task.handle {
 				handle.abort();
 			}
 		}
 
-		tasks.clear();
-		self.documents.write().unwrap().clear();
+		docs.clear();
 		self.linters.write().unwrap().clear();
-
 		eprintln!("Shutdown complete");
 		return Ok(());
 	}
@@ -156,22 +173,23 @@ impl LanguageServer for RegexLinterServer {
 			Self::printem_linter_info(&linters);
 		}
 
-		for (url, doc) in self.documents.read().unwrap().iter() {
-			self.lintem(url, doc);
+		let urls: Vec<Url> = self.documents.read().unwrap().keys().cloned().collect();
+		for url in &urls {
+			self.lintem(url);
 		}
 	}
 
 	async fn did_open(&self, params: DidOpenTextDocumentParams) -> () {
 		let text_document = params.text_document;
 		let uri = text_document.uri;
-		let new_doc = Document {
+		let new_content = DocumentContent {
 			language_id: text_document.language_id,
 			text: Arc::from(text_document.text),
 			version: text_document.version,
 		};
 
-		self.documents.write().unwrap().insert(uri.clone(), new_doc.clone());
-		self.lintem(&uri, &new_doc);
+		self.documents.write().unwrap().insert(uri.clone(), Document::new(new_content));
+		self.lintem(&uri);
 	}
 
 	async fn did_change(&self, params: DidChangeTextDocumentParams) -> () {
@@ -185,28 +203,27 @@ impl LanguageServer for RegexLinterServer {
 
 		// Let's ensure any out-of-order requests don't revert that shit to an older version
 		// We also won't re-lint as the results will most likely be incorrect anyway
-		if let Some(doc) = self.documents.write().unwrap().get_mut(&uri) && text_document.version > doc.version {
-			doc.text = Arc::from(change.text);
-			doc.version = text_document.version;
-			self.lintem(&uri, doc);
+		let gucci = if let Some(doc) = self.documents.write().unwrap().get_mut(&uri) && text_document.version > doc.content.version {
+			let content = &mut doc.content;
+			content.text = Arc::from(change.text);
+			content.version = text_document.version;
+			true
+		}
+		else {
+			false
+		};
+
+		if gucci {
+			self.lintem(&uri);
 		}
 	}
 
 	async fn did_save(&self, params: DidSaveTextDocumentParams) -> () {
-		let uri = params.text_document.uri;
-		if let Some(doc) = self.documents.read().unwrap().get(&uri) {
-			self.lintem(&uri, doc);
-		}
+		self.lintem(&params.text_document.uri);
 	}
 
 	async fn did_close(&self, params: DidCloseTextDocumentParams) -> () {
-		let uri = params.text_document.uri;
-		if let Some(task) = self.lint_tasks.lock().unwrap().remove(&uri) && let Some(handle) = task.handle {
-			handle.abort();
-		}
-
-		self.documents.write().unwrap().remove(&uri);
-		self.clearem_lint(&uri).await;
+		self.clearem_lint(&params.text_document.uri).await;
 	}
 }
 

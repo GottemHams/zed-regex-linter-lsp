@@ -6,49 +6,12 @@
 use std::fs;
 use zed_extension_api::{self as zed, Result, settings::LspSettings};
 
-const VERSION: &str = env!("CARGO_PKG_VERSION");
 const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 const RELEASE_BASE_URL: &str = "https://github.com/GottemHams/zed-regex-linter-lsp/releases/download";
 
 struct RegexLinterLspExtension {
 	cached_lsp_server_path: Option<String>,
-}
-
-impl zed::Extension for RegexLinterLspExtension {
-	fn new() -> Self {
-		return Self {
-			cached_lsp_server_path: None,
-		};
-	}
-
-	fn language_server_command(&mut self, language_server_id: &zed::LanguageServerId, _worktree: &zed::Worktree) -> Result<zed::Command> {
-		return match language_server_id.as_ref() {
-			Self::LANGUAGE_SERVER_ID => Ok(zed::Command {
-				command: self.lsp_server_path()?,
-				args: vec![],
-				env: Default::default(),
-			}),
-
-			language_server_id => Err(format!("Unknown language server: {}", language_server_id)),
-		};
-	}
-
-	fn language_server_workspace_configuration(&mut self, language_server_id: &zed::LanguageServerId, worktree: &zed::Worktree) -> Result<Option<serde_json::Value>> {
-		return match language_server_id.as_ref() {
-			Self::LANGUAGE_SERVER_ID => {
-				let settings = LspSettings::for_worktree(Self::LANGUAGE_SERVER_ID, worktree)
-					.ok()
-					.and_then(|lsp_settings| lsp_settings.settings)
-					.unwrap_or_default();
-
-				Ok(Some(serde_json::json!({
-					Self::LANGUAGE_SERVER_ID: settings,
-				})))
-			},
-
-			_ => Ok(None),
-		};
-	}
 }
 
 impl RegexLinterLspExtension {
@@ -101,6 +64,43 @@ impl RegexLinterLspExtension {
 			.map_err(|_| format!("Binary not found after extraction, which was expected at: {}", download_path))?;
 
 		return Ok(download_path);
+	}
+}
+
+impl zed::Extension for RegexLinterLspExtension {
+	fn new() -> Self {
+		return Self {
+			cached_lsp_server_path: None,
+		};
+	}
+
+	fn language_server_command(&mut self, language_server_id: &zed::LanguageServerId, _worktree: &zed::Worktree) -> Result<zed::Command> {
+		return match language_server_id.as_ref() {
+			Self::LANGUAGE_SERVER_ID => Ok(zed::Command {
+				command: self.lsp_server_path()?,
+				args: vec![],
+				env: Default::default(),
+			}),
+
+			language_server_id => Err(format!("Unknown language server: {}", language_server_id)),
+		};
+	}
+
+	fn language_server_workspace_configuration(&mut self, language_server_id: &zed::LanguageServerId, worktree: &zed::Worktree) -> Result<Option<serde_json::Value>> {
+		return match language_server_id.as_ref() {
+			Self::LANGUAGE_SERVER_ID => {
+				let settings = LspSettings::for_worktree(Self::LANGUAGE_SERVER_ID, worktree)
+					.ok()
+					.and_then(|lsp_settings| lsp_settings.settings)
+					.unwrap_or_default();
+
+				Ok(Some(serde_json::json!({
+					Self::LANGUAGE_SERVER_ID: settings,
+				})))
+			},
+
+			_ => Ok(None),
+		};
 	}
 }
 
