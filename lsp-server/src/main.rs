@@ -79,18 +79,25 @@ impl RegexLinterServer {
 	}
 
 	fn lintem(&self, url: &Url) -> () {
+		// Lock poisoning really shouldn't happen, so in that case we'll just shit ourselves =]]
 		let mut docs = self.documents.write().unwrap();
 		let Some(doc) = docs.get_mut(url) else {
 			return;
 		};
 
-		// Repeated requests for the same (latest) document version are fine, as long as we don't interrupt existing runs
 		let task = doc.lint_task.get_or_insert_default();
-		if let Some(handle) = &task.handle && !handle.is_finished() {
-			if task.document_version >= doc.content.version {
+		if let Some(handle) = &task.handle {
+			// Although it shouldn't really happen in practice, we'll drop out-of-order requests to avoid even scheduling a task that would return early anyway
+			if task.document_version > doc.content.version {
 				return;
 			}
 
+			// Repeated requests for the same (latest) document version are fine, as long as we don't interrupt existing runs
+			if task.document_version == doc.content.version && !handle.is_finished() {
+				return;
+			}
+
+			// Otherwise we should always abort, which has no effect if the task is already done
 			handle.abort();
 		}
 
