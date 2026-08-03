@@ -15,6 +15,7 @@ type CommentMarkers = (CommentStart, BlockCommentEnd);
 
 // This is for mapping Zed languages in `settings.json` to LSP language IDs, so the config is a bit more intuitive
 const LANGUAGE_ID_MAP: &[(LanguageName, LanguageId)] = &[
+	("Arduino", "arduino"),
 	("C", "c"),
 	("C++", "cpp"),
 	("C#", "csharp"),
@@ -36,6 +37,7 @@ const LANGUAGE_ID_MAP: &[(LanguageName, LanguageId)] = &[
 	("SCSS", "scss"),
 	("Shell Script", "shell script"), // Apparently the ID contains a space too??¿¿¿÷¿??//
 	("Swift", "swift"),
+	("TOML", "toml"),
 	("TSX", "tsx"),
 	("TypeScript", "typescript"),
 	("YAML", "yaml"),
@@ -43,6 +45,7 @@ const LANGUAGE_ID_MAP: &[(LanguageName, LanguageId)] = &[
 
 // These should always be preceded by some ASCII whitespace (or the start of the line) to be detected as a comment, so we can avoid (some) false positives in strings etc
 const COMMENT_MARKER_MAP: &[(LanguageId, &[CommentMarkers])] = &[
+	("arduino", &[("//", None), ("/*", Some("*/"))]),
 	("c", &[("//", None), ("/*", Some("*/"))]),
 	("cpp", &[("//", None), ("/*", Some("*/"))]),
 	("csharp", &[("//", None), ("/*", Some("*/"))]),
@@ -64,13 +67,14 @@ const COMMENT_MARKER_MAP: &[(LanguageId, &[CommentMarkers])] = &[
 	("scss", &[("//", None), ("/*", Some("*/"))]),
 	("shell script", &[("#", None)]),
 	("swift", &[("//", None), ("/*", Some("*/"))]),
+	("toml", &[("#", None)]),
 	("tsx", &[("//", None), ("/*", Some("*/"))]),
 	("typescript", &[("//", None), ("/*", Some("*/"))]),
 	("yaml", &[("#", None)]),
 ];
 
 #[derive(Debug)]
-pub struct Linter {
+pub(crate) struct Linter {
 	enabled: bool,
 	comments_only: bool,
 	languages: Option<Vec<String>>,
@@ -111,14 +115,14 @@ impl LinterConfig {
 	}
 }
 
-pub fn parsem_config(settings: &serde_json::Value) -> HashMap<String, Linter> {
+pub(crate) fn parsem_config(settings: &serde_json::Value) -> HashMap<String, Linter> {
 	let mut configs = HashMap::new();
 	configs.insert(annotations::SOURCE.to_string(), annotations::config());
 
 	if let Some(settings) = settings.as_object() {
 		for (key, value) in settings {
 			let linter_config = serde_json::from_value::<LinterConfig>(value.clone())
-				.inspect_err(|e| eprintln!("Failed to parse config for linter '{}': {}", key, e));
+				.inspect_err(|e| eprintln!("[WARN] Failed to parse config for linter '{}': {}", key, e));
 
 			if let Ok(linter_config) = linter_config {
 				configs.entry(key.to_string()).or_default().mergem(linter_config);
@@ -138,24 +142,24 @@ pub fn parsem_config(settings: &serde_json::Value) -> HashMap<String, Linter> {
 					.unwrap_or(lang)
 			}).collect()
 		}),
-		error_regex: compilem_regexes(&config.error.unwrap_or_default()),
-		warning_regex: compilem_regexes(&config.warning.unwrap_or_default()),
-		info_regex: compilem_regexes(&config.info.unwrap_or_default()),
+		error_regex: compilem_regex(&config.error.unwrap_or_default()),
+		warning_regex: compilem_regex(&config.warning.unwrap_or_default()),
+		info_regex: compilem_regex(&config.info.unwrap_or_default()),
 	})).collect();
 }
 
-fn compilem_regexes(patterns: &[String]) -> Option<Regex> {
+fn compilem_regex(patterns: &[String]) -> Option<Regex> {
 	if patterns.is_empty() {
 		return None;
 	}
 
-	// Sort by longest patterns first so more specific matches take precedence
+	// Sort by longest patterns first so more specific matches (should) take precedence
 	let mut sorted: Vec<&str> = patterns.iter().map(|pattern| pattern.as_ref()).collect();
 	sorted.sort_unstable_by_key(|pattern| std::cmp::Reverse(pattern.len()));
 
 	let full_pattern = format!(r"(?P<word>{})(?::|\s+-+)?\s*(?P<message>.*)", sorted.join("|"));
 	return Regex::new(&full_pattern)
-		.inspect_err(|e| eprintln!("Failed to compile pattern: {}\n{}", full_pattern, e))
+		.inspect_err(|e| eprintln!("[ERROR] Failed to compile pattern: {}\n{}", full_pattern, e))
 		.ok();
 }
 
@@ -184,9 +188,9 @@ fn find_comment_text(line: &str, comment_markers: &CommentMarkers) -> Option<(us
 	return None;
 }
 
-pub fn scannem(document_content: &DocumentContent, linters: &HashMap<String, Linter>) -> Vec<Diagnostic> {
+pub(crate) fn scannem(document_content: &DocumentContent, linters: &HashMap<String, Linter>) -> Vec<Diagnostic> {
 	let text = &document_content.text;
-	let language_id = &document_content.language_id;
+	let language_id = &*document_content.language_id;
 
 	let comment_markers = COMMENT_MARKER_MAP.iter()
 		.find(|(lang_id, _)| *lang_id == language_id)
@@ -203,7 +207,7 @@ pub fn scannem(document_content: &DocumentContent, linters: &HashMap<String, Lin
 			continue;
 		}
 
-		if linter.languages.as_ref().is_some_and(|langs| !langs.iter().any(|lang_id| lang_id == language_id)) {
+		if let Some(langs) = &linter.languages && !langs.iter().any(|lang_id| lang_id == language_id) {
 			continue;
 		}
 
