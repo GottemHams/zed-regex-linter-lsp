@@ -5,15 +5,16 @@
 
 mod linter;
 
-use linter::Linter;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use tokio::io::{stdin, stdout};
 use tokio::task::AbortHandle;
+use tower_lsp::{Client, LanguageServer, LspService, Server};
 use tower_lsp::jsonrpc::Result as LspResult;
 use tower_lsp::lsp_types::*;
-use tower_lsp::{Client, LanguageServer, LspService, Server};
+
+use linter::Linter;
 
 const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -171,12 +172,14 @@ impl LanguageServer for RegexLinterServer {
 
 		docs.clear();
 		self.linters.write().unwrap().clear();
+
 		eprintln!("Shutdown complete");
 		return Ok(());
 	}
 
 	async fn did_change_configuration(&self, params: DidChangeConfigurationParams) -> () {
-		eprintln!("Configuration changed, reloading linters...");
+		eprintln!("Configuration change detected, reloading linters...");
+
 		if let Some(lsp_settings) = params.settings.get(LANGUAGE_SERVER_ID) {
 			*self.linters.write().unwrap() = linter::parsem_config(lsp_settings);
 			self.printem_linter_info();
@@ -197,7 +200,12 @@ impl LanguageServer for RegexLinterServer {
 			version: text_document.version,
 		};
 
-		self.documents.write().unwrap().insert(uri.clone(), Document::new(new_content));
+		let prev_doc = self.documents.write().unwrap().insert(uri.clone(), Document::new(new_content));
+		if let Some(prev_doc) = prev_doc && let Some(task) = prev_doc.lint_task && let Some(handle) = task.handle {
+			// Shouldn't really be possible because `did_close()` should already have removed the entry, but we may not **necessarily** run in that exact order
+			handle.abort();
+		}
+
 		self.lintem(&uri);
 	}
 
