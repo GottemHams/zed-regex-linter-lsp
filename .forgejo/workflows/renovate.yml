@@ -14,6 +14,18 @@ jobs:
       image: ghcr.io/renovatebot/renovate:44
       options: --tmpfs /tmp:exec
     steps:
+      - id: bruh
+        name: B R U H
+        run: |
+          echo "=== Filesystem Type & Free Space ==="
+          df -Th /tmp
+
+          echo "=== Inode Usage ==="
+          df -i /tmp
+
+          echo "=== Mount Details ==="
+          mount | grep /tmp
+
       - id: renovate
         name: Run Renovate
         run: renovate
