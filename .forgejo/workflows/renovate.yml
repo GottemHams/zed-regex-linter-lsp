@@ -1,6 +1,9 @@
 name: Ren0vatem
 
 on:
+  push:
+    branches:
+      - master
   schedule:
     - cron: '30 */8 * * *'
 
