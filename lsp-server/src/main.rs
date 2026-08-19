@@ -5,15 +5,16 @@
 
 mod linter;
 
-use linter::Linter;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use tokio::io::{stdin, stdout};
 use tokio::task::AbortHandle;
+use tower_lsp::{Client, LanguageServer, LspService, Server};
 use tower_lsp::jsonrpc::Result as LspResult;
 use tower_lsp::lsp_types::*;
-use tower_lsp::{Client, LanguageServer, LspService, Server};
+
+use linter::Linter;
 
 const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -22,8 +23,9 @@ const DEBOUNCE_MS: Duration = Duration::from_millis(300);
 
 #[derive(Clone)]
 struct DocumentContent {
-	language_id: String,
-	text: Arc<str>, // Let's put this in an `Arc` to avoid ever copying the full text
+	// Let's put the strings in an `Arc` to avoid ever copying them, as we do need to clone this struct pretty often (and possibly in very quick succession)
+	language_id: Arc<str>,
+	text: Arc<str>,
 	version: i32,
 }
 
@@ -58,21 +60,24 @@ impl RegexLinterServer {
 	fn new(client: Client) -> Self {
 		// We can just pass a null value to get the default configs =]]
 		let linters = linter::parsem_config(&serde_json::Value::Null);
-		Self::printem_linter_info(&linters);
-		return Self {
+		let this = Self {
 			client: client,
 			linters: Arc::new(RwLock::new(linters)),
 			documents: Arc::new(RwLock::new(HashMap::new())),
 		};
+
+		this.printem_linter_info();
+		return this;
 	}
 
-	fn printem_linter_info(linters: &HashMap<String, Linter>) -> () {
+	fn printem_linter_info(&self) -> () {
+		let linters = self.linters.read().unwrap();
 		if linters.is_empty() {
 			eprintln!("[WARN] No linters were loaded");
 		}
 		else {
 			eprintln!("Loaded linters:");
-			for (source, linter) in linters {
+			for (source, linter) in linters.iter() {
 				eprintln!("- {}: {:?}", source, linter);
 			}
 		}
@@ -167,17 +172,17 @@ impl LanguageServer for RegexLinterServer {
 
 		docs.clear();
 		self.linters.write().unwrap().clear();
+
 		eprintln!("Shutdown complete");
 		return Ok(());
 	}
 
 	async fn did_change_configuration(&self, params: DidChangeConfigurationParams) -> () {
-		eprintln!("Configuration changed, reloading linters...");
-		let lsp_settings = params.settings.get(LANGUAGE_SERVER_ID);
-		if let Some(lsp_settings) = lsp_settings {
-			let mut linters = self.linters.write().unwrap();
-			*linters = linter::parsem_config(lsp_settings);
-			Self::printem_linter_info(&linters);
+		eprintln!("Configuration change detected, reloading linters...");
+
+		if let Some(lsp_settings) = params.settings.get(LANGUAGE_SERVER_ID) {
+			*self.linters.write().unwrap() = linter::parsem_config(lsp_settings);
+			self.printem_linter_info();
 		}
 
 		let urls: Vec<Url> = self.documents.read().unwrap().keys().cloned().collect();
@@ -190,12 +195,17 @@ impl LanguageServer for RegexLinterServer {
 		let text_document = params.text_document;
 		let uri = text_document.uri;
 		let new_content = DocumentContent {
-			language_id: text_document.language_id,
+			language_id: Arc::from(text_document.language_id),
 			text: Arc::from(text_document.text),
 			version: text_document.version,
 		};
 
-		self.documents.write().unwrap().insert(uri.clone(), Document::new(new_content));
+		let prev_doc = self.documents.write().unwrap().insert(uri.clone(), Document::new(new_content));
+		if let Some(prev_doc) = prev_doc && let Some(task) = prev_doc.lint_task && let Some(handle) = task.handle {
+			// Shouldn't really be possible because `did_close()` should already have removed the entry, but we may not **necessarily** run in that exact order
+			handle.abort();
+		}
+
 		self.lintem(&uri);
 	}
 

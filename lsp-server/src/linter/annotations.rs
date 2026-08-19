@@ -1,8 +1,8 @@
 use super::LinterConfig;
 
-pub const SOURCE: &str = "annotations";
+pub(crate) const SOURCE: &str = "annotations";
 
-pub fn config() -> LinterConfig {
+pub(crate) fn config() -> LinterConfig {
 	return LinterConfig {
 		enabled: Some(false),
 		comments_only: Some(true),
