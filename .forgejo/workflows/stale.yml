@@ -10,7 +10,7 @@ jobs:
     steps:
       - id: stale
         name: Checkem stale issues/PRs
-        uses: https://github.com/actions/stale@v10
+        uses: https://github.com/actions/stale@v11
         with:
           days-before-issue-stale: 60
           days-before-issue-close: 7
