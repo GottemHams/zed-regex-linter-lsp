@@ -26,4 +26,4 @@ jobs:
           RENOVATE_BRANCH_PREFIX: 'ren0vatem-'
           RENOVATE_ONBOARDING: false
           RENOVATE_REQUIRE_CONFIG: 'optional'
-          RENOVATE_BASE_DIR: /ren0vate
+          RENOVATE_BASE_DIR: ${{ forgejo.workspace }}/ren0vate
