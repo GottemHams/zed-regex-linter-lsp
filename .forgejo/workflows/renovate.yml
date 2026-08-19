@@ -39,3 +39,15 @@ jobs:
           RENOVATE_BRANCH_PREFIX: 'ren0vatem-'
           RENOVATE_ONBOARDING: false
           RENOVATE_REQUIRE_CONFIG: 'optional'
+
+      - id: bruh2
+        name: B R U H 2
+        run: |
+          echo "=== Filesystem Type & Free Space ==="
+          df -Th /tmp
+
+          echo "=== Inode Usage ==="
+          df -i /tmp
+
+          echo "=== Mount Details ==="
+          mount | grep /tmp
