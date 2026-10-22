@@ -1,9 +1,6 @@
 name: Ren0vatem
 
 on:
-  push:
-    branches:
-      - master
   schedule:
     - cron: '30 */8 * * *'
 
@@ -12,7 +9,6 @@ jobs:
     runs-on: docker
     container:
       image: ghcr.io/renovatebot/renovate:44
-      options: --tmpfs /tmp:exec
     steps:
       - id: renovate
         name: Run Renovate
@@ -26,4 +22,3 @@ jobs:
           RENOVATE_BRANCH_PREFIX: 'ren0vatem-'
           RENOVATE_ONBOARDING: false
           RENOVATE_REQUIRE_CONFIG: 'optional'
-          RENOVATE_BASE_DIR: ${{ forgejo.workspace }}/ren0vate
